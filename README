@@ -1,0 +1,33 @@
+========= README ========
+
+
+1. frgetter: 下載flickr相片集(sets)的工具
+   使用方式: frgetter [-o] Flickr_Sets_URL
+   例如:
+	下載相片集:
+	  frgetter http://www.flickr.com/photos/riddleapple/sets/72157627896552339/
+
+	加-o參數，會嘗試下載原始大圖:
+	  frgetter -o http://www.flickr.com/photos/riddleapple/sets/72157627896552339/
+
+
+2. renamefiles: 批次改檔名的工具
+   使用方式: renamefile [-a] name file(s)
+   例如:
+	假設當前目錄下有3個檔案，檔名為:
+	  aaa.jpg
+	  bbb.jpg
+	  ccc.jpg
+	如果我想在這3個檔名前面都加上"zzz_"，可以這樣使用(要加-a參數):
+	  renamefiles -a zzz_ *.jpg
+	結果為:
+	  zzz_aaa.jpg
+	  zzz_bbb.jpg
+	  zzz_ccc.jpg
+
+	如果我想這3個檔名依序變成xyz_01.jpg, xyz_02.jpg, xyz_03.jpg，可以這樣用:
+	  renamefiles xyz_ *.jpg
+	結果為:
+	  xyz_01.jpg
+	  xyz_02.jpg
+	  xyz_03.jpg
