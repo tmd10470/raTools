@@ -1,4 +1,4 @@
-========= README ========
+================  README  ================
 
 
 1. frgetter: 下載flickr相片集(sets)的工具
@@ -9,6 +9,20 @@
 
 	加-o參數，會嘗試下載原始大圖:
 	  frgetter -o http://www.flickr.com/photos/riddleapple/sets/72157627896552339/
+
+
+   如果想一次下載好幾個相片集(sets)，可以使用frgetter_list :
+   例如:
+	先建立一個文字檔，例如dl_list.txt，然後輸入相片集(sets)的網址，一行一個網址：
+	  cat dl_list.txt
+	  http://www.flickr.com/photos/riddleapple/sets/72157627896552339/
+	  http://www.flickr.com/photos/riddleapple/sets/72157627896557783/
+	然後下載相片集:
+	  frgetter_list dl_list.txt
+	
+	加-o參數，會嘗試下載原始大圖:
+	  frgetter_list -o dl_list.txt
+
 
 
 2. renamefiles: 批次改檔名的工具
