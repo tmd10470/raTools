@@ -1,0 +1,85 @@
+#!/usr/bin/env perl
+
+use warnings;
+use strict;
+
+# Main Code:
+unless (@ARGV) {
+    print "renamefiles v0.01 by Riddle Ling, 2011.\n\n";
+    print " Usage: renamefiles [-a] name file(s)\n";
+    print " Options:\n";
+    print "\t-a\tAdd name to filename in front.\n\n";
+    exit 0;
+}
+
+my $opt = $ARGV[0] eq '-a';
+shift @ARGV if $opt;
+
+my $new_name = shift @ARGV;
+
+if ($opt) {
+    my $ok_num = 0;
+    my $fail_num = 0;
+    foreach my $filename (@ARGV) {
+	my $new_filename = $new_name . $filename;
+	if (-e $new_filename) {
+	    warn "=> Rename \"$filename\" to \"$new_filename\" is fail! File already exists!\n";
+	    $fail_num++;
+	} elsif (rename $filename, $new_filename) {
+	    print "Rename \"$filename\" to \"$new_filename\" is OK.\n";
+	    $ok_num++;
+	} else {
+	    warn "=> Rename \"$filename\" to \"$new_filename\" is fail!\n";
+	    $fail_num++;
+	}
+    }
+    print "\n -- Rename OK: $ok_num files, Fail: $fail_num files --\n";
+} else {
+    my $ok_num = 0;
+    my $fail_num = 0;
+    my $n = 1;
+    my $files_number = @ARGV;
+    my $digits_number = &number_of_digits($files_number);
+
+    if ($digits_number <= 3) {
+	$digits_number++;
+    }
+
+    foreach my $filename (@ARGV) {
+	my $num = sprintf "%0${digits_number}d", $n;
+	my $filename_ext = $filename;
+	my $new_filename;
+
+	# Setup new filename
+	if ($filename_ext =~ s/^.*(\.[^.]+)$/$1/) {
+	    $new_filename = $new_name . $num . $filename_ext;
+	} else {
+	    $new_filename = $new_name . $num;
+	}
+
+	# Rename file
+	if (-e $new_filename) {
+	    warn "=> Rename \"$filename\" to \"$new_filename\" is fail! File already exists!\n";
+	    $fail_num++;
+	} elsif (rename $filename, $new_filename) {
+	    print "Rename \"$filename\" to \"$new_filename\" is OK.\n";
+	    $ok_num++;
+	    $n++;
+	} else {
+	    warn "=> Rename \"$filename\" to \"$new_filename\" is fail!\n";
+	    $fail_num++;
+	}
+    }
+
+    print "\n -- Rename OK: $ok_num files, Fail: $fail_num files --\n";
+}
+
+sub number_of_digits {
+    my $num = shift @_;
+    my $digit_num = 1;
+    while ($num >= 10) {
+	$num /= 10;
+	$digit_num++;
+    }
+    return $digit_num;
+}

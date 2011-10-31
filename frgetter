@@ -1,0 +1,197 @@
+#!/usr/bin/env perl
+
+use 5.010;
+use warnings;
+use strict;
+use Cwd;
+
+# Main Code :
+
+unless (@ARGV) {
+    print "frGetter v0.01 by Riddle Ling, 2011.\n\n";
+    print " Usage: frgetter [-o] Flickr_Sets_URL\n\n";
+    print " Options:\n";
+    print "\t-o\tDownload the original size images.\n\n";
+    exit 0;
+}
+
+my $original_image = $ARGV[0] eq '-o';
+shift @ARGV if $original_image;
+
+my $source = shift @ARGV;
+chomp($source);
+
+print "\nSets: $source\n";
+my $max_page = &get_max_page($source);
+if ($max_page) {
+    print "Number of pages: " . $max_page . "\n";
+}
+
+
+# set up dir name.
+my $dir_name = $source;
+$dir_name =~ s#http://www\.flickr\.com/photos/(.*)/sets/\d+/$#$1#;
+ # print "DIR_NAME: " . $dir_name . "\n";
+
+# mkdir UserName dir.
+unless ( -e $dir_name and -d _ ) {
+    mkdir $dir_name, 0755 or die "mkdir $dir_name is fail! : $!";
+}
+
+# cd UserName dir.
+chdir $dir_name or die "cd $dir_name is fail! : $!";
+
+
+# set up Sets name.
+my $sets_name = $source;
+$sets_name =~ s#http://www\.flickr\.com/photos/.*/sets/(\d+)/$#$1#;
+ # print "SETS_NAME: " . $sets_name ."\n";
+
+# mkdir SetsName dir.
+unless ( -e $sets_name and -d _ ) {
+    mkdir $sets_name, 0755 or die "mkdir $sets_name is fail! : $!";
+}
+
+# cd SetsName dir.
+chdir $sets_name or die "cd $sets_name is fail! : $!";
+
+
+# start download.
+my $download_file_number;
+my $count = 1;
+
+# Download page 1.
+$download_file_number = &get_images($source);
+
+# Download page 2+.
+for (my $i = 2; $i <= $max_page; $i++) {
+    my $page_address = $source . '?page=' . $i;
+     #print $page_address . "\n";
+    $download_file_number = &get_images($page_address);
+}
+
+# Download 0 files: try again.
+unless ($download_file_number) {
+    $original_image = !$original_image;
+    $count = 1;
+
+    print "\n\n=== Download 0 files! Try to download again! ===\n\n";
+    
+    # Download page 1.
+    $download_file_number = &get_images($source);
+
+    # Download page 2+.
+    for (my $i = 2; $i <= $max_page; $i++) {
+	my $page_address = $source . '?page=' . $i;
+	 #print $page_address . "\n";
+	$download_file_number = &get_images($page_address);
+    }
+}
+
+my $now_time = `date`;
+chomp($now_time);
+my $now_dir = cwd;
+print "\nDone! : $now_time.\n";
+print "Download the $download_file_number files!\n";
+print "Save path : $now_dir\n\n";
+
+
+# Subroutine :
+# Get max number of pages.
+sub get_max_page {
+    my $source_address = shift @_;
+    my $page_find_keyword = $source_address;
+    $page_find_keyword =~ s#http://www\.flickr\.com(.*)$#$1?page#;
+     #print "\n\nDEBUG : page_find_keyword => $page_find_keyword \n\n";
+
+    my @source_pages = `curl $source_address | grep $page_find_keyword`;
+    unless (@source_pages) {
+	 #print "\nDEBUG : One page!\n";
+	return 0;
+    }
+     #print "\nDEBUG : source_page => \n";
+     #print @source_pages;
+
+    for (my $i = 0; $i <= $#source_pages; $i++) {
+	$source_pages[$i] =~ s#^[^/]+/photos/.*page=(\d+)".*$#$1#;
+         #print "$source_pages[$i]\n";
+    }
+
+    my @sort_pages = sort { $a <=> $b } @source_pages;
+     #print @sort_pages;
+
+    my $max_pages = pop @sort_pages;
+    return $max_pages;
+}
+
+# Get images on the page.
+sub get_images {
+    # Get image address.
+    my $web_address = shift @_;
+    my $img_find_keyword = $web_address;
+    $img_find_keyword =~ s#http://www\.flickr\.com(.*)sets/.*$#$1#;
+    $img_find_keyword = "'" . $img_find_keyword . "[0-9]+/in/set-[0-9]+'";
+     #print $img_find_keyword . "\n";
+    my @tmp_img_pages = `curl $web_address | egrep $img_find_keyword`;
+     #print @tmp_img_pages;
+
+    my @img_pages = ();
+    for (my $i = 0; $i <= $#tmp_img_pages; $i++){
+       if ($tmp_img_pages[$i] =~ /_s\.jpg/) {
+	   $tmp_img_pages[$i] 
+	       =~ s#^.*(/photos/.*/\d+/in/set-\d+)".*$#http://www.flickr.com$1#;
+	   push @img_pages, $tmp_img_pages[$i];
+       }
+    }
+
+
+    #Download JPG file.
+    my $total_files = 0;
+    foreach (@img_pages) {
+	 #print "Download jpg file from this page: " . $_;
+	$total_files = &download_image($_);
+    }
+    return $total_files;
+}
+
+# Download image file.
+sub download_image {
+    state $number_of_files = 0;
+    my $img_address = shift @_;
+    chomp($img_address);
+
+    my $where1 = rindex($img_address, "in/set-");
+    if ($original_image) {
+	substr($img_address, $where1, 7) = "sizes/o/in/set-";
+    } else {
+	substr($img_address, $where1, 7) = "sizes/l/in/set-";
+    }
+    $img_address .= "/";
+
+    print "\n($count) Get jpg file from this:\n" . $img_address . ":\n";
+
+    my $img_file_find_keyword;
+    if ($original_image) {
+	$img_file_find_keyword = "'o.jpg'";
+    } else {
+	$img_file_find_keyword = "'b.jpg'";
+    }
+
+    my $img_file = `curl $img_address | grep $img_file_find_keyword`;
+
+    if ($original_image) {
+	$img_file =~ s#^.*img src="(http://.*o\.jpg)".*$#$1#;
+    } else {
+	$img_file =~ s#^.*img src="(http://.*b\.jpg)".*$#$1#;
+    }
+
+    # Download jpg file.
+    unless (system "curl -O $img_file") {
+	$number_of_files += 1;
+	print "-> OK!\n";
+    } else {
+	print "-> Download jpg file is fail!\n";
+    }
+    $count += 1;
+    return $number_of_files;
+}

@@ -1,0 +1,39 @@
+#!/usr/bin/env perl
+
+use warnings;
+
+
+unless (@ARGV) {
+    print "frgetter_list v0.01 by Riddle Ling, 2011.\n\n";
+    print " Usage: frgetter_list [-o] file\n\n";
+    print " Options:\n";
+    print "\t-o\tDownload the original size images.\n\n";
+    exit 0;
+}
+
+my $opt = $ARGV[0] eq '-o';
+shift @ARGV if $opt;
+
+my $file = shift @ARGV;
+
+if ( ! open LISTFILE, "<$file") {
+    die "Open file is fail!: ($!)";
+}
+
+if ($opt) {
+    while (<LISTFILE>) {
+	chomp;
+	print "\n=> frgetter -o $_\n";
+	unless (system "frgetter -o $_") {
+	    print "Download \"$_\" is OK.\n\n";
+	}
+    }
+} else {
+    while (<LISTFILE>) {
+	chomp;
+	print "\n=> frgetter $_\n";
+	unless (system "frgetter $_") {
+	    print "Download \"$_\" is OK.\n\n";
+	}
+    }
+}
