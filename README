@@ -56,3 +56,15 @@
 	  xyz_03.jpg
 
 
+
+3. wretch_dl: 下載無名相簿的工具.
+
+   此工具會用到curl, 所以需安裝curl.
+
+   使用方式: wretch_dl 'Wretch_Album_URL'
+   例如:
+	wretch_dl 'http://www.wretch.cc/album/album.php?id=riddleapple&book=2'
+
+   其中, 網址要用引號括起來, 因爲要避免網址中的'&'符號被當成shell的特殊字符.
+
+
