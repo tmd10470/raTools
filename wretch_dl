@@ -1,0 +1,130 @@
+#!/usr/bin/env perl
+
+use 5.010;
+use warnings;
+use strict;
+use Cwd;
+
+
+#
+# Main Code :
+#
+
+# No argument, show 'help':
+unless (@ARGV) {
+    say "WretchDL v0.01 by Riddle Ling, 2011.\n";
+    say " Usage: wretch_dl 'Wretch_Album_URL'\n";
+    exit 0;
+}
+
+# Setup wretch url:
+my $wretch_url = 'http://www.wretch.cc/album/';
+
+# Setup album url:
+my $album_url = shift @ARGV;
+chomp($album_url);
+
+# Setup album id and book number:
+my $temp_data = $album_url;
+$temp_data =~ s#http://www\.wretch\.cc/album/album\.php\?id=(.+)&book=(\d+)#$1,$2#;
+my($album_id, $book_num) = split /,/, $temp_data;
+
+# print album id and book number:
+say "Album id: $album_id";
+say "book number: $book_num";
+
+# mkdir Album_ID_Name_dir:
+unless ( -e $album_id and -d _ ) {
+    mkdir $album_id, 0755 or die "mkdir $album_id is fail! : $!";
+}
+
+# chdir Album_ID_Name_dir:
+chdir $album_id or die "cd $album_id is fail! : $!";
+
+# Setup and mkdir Book_Number_Name_dir:
+my $book_num_dir = 'book' . $book_num;
+unless ( -e $book_num_dir and -d _ ) {
+    mkdir $book_num_dir, 0755 or die "mkdir $book_num_dir is fail! : $!";
+}
+
+# chdir Book_Number_Name_dir:
+chdir $book_num_dir or die "cd $book_num_dir is fail! : $!";
+
+
+# Get album number of pages:
+say "Search number of pages...:";
+my $page_num = &get_page_num();
+say "=> Number of pages: $page_num \n";
+
+# Download images:
+&download_images();
+my $now_dir = cwd;
+say "Save path: $now_dir\n";
+
+
+#
+# Subroutine code :
+#
+
+# Get number of pages:
+sub get_page_num {
+    my $num=1;
+    while(1) {
+	my $page_url = $album_url . '&page=' . $num;
+	my $next_page_url = $album_url . '&page=' . ($num+1);
+	my $next_page = `curl -# '$page_url' | grep '$next_page_url'`;
+	if ($next_page) {
+	    $num++;
+	     #say $next_page;
+	} else {
+	    last;
+	}
+    }
+    $num;
+}
+
+# Download images:
+sub download_images {
+    my $files_num = 0;
+
+    for (my $i=1; $i<=$page_num; $i++) {
+	my $album_page_url = $album_url . '&page=' . $i;
+	my $find_key = "show.php?i=${album_id}&b=${book_num}&f=";
+	say "Search images url(page $i):";
+	my @temp_images_url = `curl -# '$album_page_url' | grep '$find_key' | grep '.jpg'`;
+
+	foreach my $temp_url (@temp_images_url) {
+	    $temp_url =~ s#^\s*<a href="\./([^"]*)".+$#$1#;
+	    chomp($temp_url);
+
+	    say "Wait 1 sec...";
+	    sleep 1;
+
+	    say "Get jpg file url from:";
+	    say "$wretch_url$temp_url";
+	    my $jpg_file_url = `curl -# '$wretch_url$temp_url' | grep 'displayimg'`;
+	    if ($jpg_file_url) {
+		$jpg_file_url =~ s#^.+<img class='displayimg' src='([^']*)'.+$#$1#;
+	    } else {
+		$jpg_file_url = `curl -# '$wretch_url$temp_url' | grep 'DisplayImage'`;
+		$jpg_file_url =~ s#^.+<img id='DisplayImage' src='([^']*)'.+$#$1#;
+	    }
+
+	    chomp($jpg_file_url);
+	     #say "=> $jpg_file_url";
+
+	    my $jpg_file_name = $jpg_file_url;
+	    $jpg_file_name =~ s#^http://.+/(.+\.jpg)\?.+$#$1#;
+
+	    say "Download $jpg_file_name :";
+
+	    unless (system "curl -# --referer $wretch_url '$jpg_file_url' -o $jpg_file_name") {
+		say "=> OK!\n";
+		$files_num++;
+	    } else {
+		say "=> fail!\n";
+	    }
+	}
+    }
+    say "\nDownload the $files_num files!";
+}
