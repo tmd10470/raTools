@@ -72,10 +72,13 @@ sub get_page_num {
     while(1) {
 	my $page_url = $album_url . '&page=' . $num;
 	my $next_page_url = $album_url . '&page=' . ($num+1);
+	$next_page_url =~ s#^http://www.wretch.cc/album/##;
+	 #say "test : next_page url : $next_page_url";
+
 	my $next_page = `curl -# '$page_url' | grep '$next_page_url'`;
 	if ($next_page) {
 	    $num++;
-	     #say $next_page;
+	    #say $next_page;
 	} else {
 	    last;
 	}
